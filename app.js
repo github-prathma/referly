@@ -64,6 +64,7 @@
 
   // ---------- Workspace (the folder, sheet and docs the setup wizard created) ----------
   let WS = null;
+  let ACCOUNT = ''; // signed-in Google email; PDF download links name it so Drive uses this account, not the browser's first one
   const U = {
     sheet: (id) => `https://docs.google.com/spreadsheets/d/${id}/edit`,
     doc: (id) => `https://docs.google.com/document/d/${id}/edit`,
@@ -140,7 +141,7 @@
   $('signin-tab').addEventListener('click', () => signInSameTab(needConsent));
   $('signout').addEventListener('click', () => {
     if (token) google.accounts.oauth2.revoke(token, () => {});
-    clearToken(); clearInterval(timer); lastLoaded = null; jobs = []; runs = []; drafts = []; usingSample = false; realData = null; WS = null;
+    clearToken(); clearInterval(timer); lastLoaded = null; jobs = []; runs = []; drafts = []; usingSample = false; realData = null; WS = null; ACCOUNT = '';
     $('setup').hidden = true;
     showGate('signin');
   });
@@ -217,6 +218,7 @@
     setUpdated('Refreshing…');
     try {
       const tab = (range) => api(SHEETS + WS.tracker + '/values/' + encodeURIComponent(range));
+      if (!ACCOUNT) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then((r) => { ACCOUNT = (r.user && r.user.emailAddress) || ''; if (ACCOUNT && !$('app').hidden) render(); }).catch(() => {});
       const [sheet, runTab, outreach, profile] = await Promise.all([
         tab(`'${WS.jobsTab || 'Jobs'}'!A1:S1000`),
         tab("'Runs'!A1:G500").catch(() => ({ values: [] })),
@@ -494,7 +496,9 @@
   // A Drive link to the job's PDF becomes a direct download, so the file saves under its Drive name (e.g. PrathmaRastogi.pdf).
   const pdfDownload = (link) => {
     const m = String(link || '').match(/\/d\/([\w-]{20,})|[?&]id=([\w-]{20,})/);
-    return m ? 'https://drive.google.com/uc?export=download&id=' + (m[1] || m[2]) : null;
+    if (!m) return null;
+    // authuser picks the account that owns the file; without it Drive uses the first signed-in account and returns 403.
+    return 'https://drive.usercontent.google.com/download?id=' + (m[1] || m[2]) + '&export=download' + (ACCOUNT ? '&authuser=' + encodeURIComponent(ACCOUNT) : '');
   };
   const pdfBtn = (r) => {
     const a = btn('PDF', pdfDownload(r['Resume PDF']), 'download', 'var(--s-ready)');
