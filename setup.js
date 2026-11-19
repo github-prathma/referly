@@ -227,7 +227,7 @@ window.JD_SETUP = (() => {
       await task('Connecting everything to this dashboard', 'link', async () => {
         await api(`${DRIVE}/${created.tracker}?fields=id`, { method: 'PATCH', json: { appProperties: {
           jobAgentRole: 'tracker', folder: created.folder, config: created.config, resume: created.resume,
-          resumes: created.subs.resumes, outreach: created.subs.outreach, runlogs: created.subs.runlogs, profileGid: String(SHEET_IDS.Profile),
+          resumes: created.subs.resumes, outreach: created.subs.outreach, runlogs: created.subs.runlogs, profileGid: String(SHEET_IDS.Profile), agentVersion: AGENT_VERSION,
         } } });
         return true;
       });
@@ -304,6 +304,9 @@ window.JD_SETUP = (() => {
   }
 
   // ---------- Agent instructions (filled with this user's IDs) ----------
+  // Bump when agent/agent-prompt.md changes in a way existing users should pick up;
+  // the dashboard then asks them to copy the new instructions into their scheduled task.
+  const AGENT_VERSION = '2026-11-19';
   async function agentPrompt(ws, who) {
     const r = await fetch('agent/agent-prompt.md', { cache: 'no-store' });
     if (!r.ok) throw new Error('could not load the agent template');
@@ -321,8 +324,11 @@ window.JD_SETUP = (() => {
     try {
       await navigator.clipboard.writeText(await agentPrompt(ws, who));
       buttonEl.lastChild.textContent = 'Copied! Now paste it into Claude';
+      setTimeout(() => { buttonEl.lastChild.textContent = label; }, 3500);
+      return true;
     } catch (e) { buttonEl.lastChild.textContent = 'Could not copy: ' + e.message; }
     setTimeout(() => { buttonEl.lastChild.textContent = label; }, 3500);
+    return false;
   }
 
   // ---------- Wiring ----------
@@ -401,5 +407,5 @@ window.JD_SETUP = (() => {
     show((window.JD_CONFIG || {}).GOOGLE_API_KEY ? 0 : 1);
   }
 
-  return { open, agentPrompt, copyPrompt };
+  return { open, agentPrompt, copyPrompt, AGENT_VERSION };
 })();

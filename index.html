@@ -15,7 +15,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>try{var t=localStorage.getItem('jd_theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
-<script src="config.js?v=20261119"></script>
+<script src="config.js?v=20261119b"></script>
 <style>
 :root {
   color-scheme: light;
@@ -115,6 +115,7 @@ a { color: inherit; }
 .banner { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--r-md); font-size: 13px; font-weight: 600;
   background: color-mix(in srgb, var(--s-ready) 14%, var(--panel)); border: 1px solid color-mix(in srgb, var(--s-ready) 40%, var(--line)); color: var(--text); }
 .banner button { margin-left: auto; }
+.banner button + button { margin-left: 0; }
 .app-err { color: var(--bad); font-size: 13px; }
 .app-err:empty { display: none; }
 
@@ -723,6 +724,12 @@ a.ref-person:hover { border-color: var(--s-referral); color: var(--s-referral); 
       <span>You're looking at sample data so you can preview the layout. Your real jobs appear after the agents' first run.</span>
       <button class="btn sm" id="sample-off" type="button">Show my data</button>
     </div>
+    <div class="banner" id="agent-banner" hidden>
+      <svg class="ic"><use href="#i-zap"/></svg>
+      <span id="agent-banner-text">New agent instructions are ready: one-page resumes saved as PDFs, and job links that go straight to the employer. Your scheduled task still has the old ones.</span>
+      <button class="btn sm primary" id="agent-banner-copy" type="button"><svg class="ic sm"><use href="#i-copy"/></svg>Copy new instructions</button>
+      <button class="btn sm" id="agent-banner-done" type="button">Done</button>
+    </div>
     <div class="app-err" id="app-err"></div>
 
     <div class="page" data-page="overview">
@@ -1007,9 +1014,9 @@ a.ref-person:hover { border-color: var(--s-referral); color: var(--s-referral); 
 </dialog>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-<script src="outreach.js?v=20261119"></script>
-<script src="resume.js?v=20261119"></script>
-<script src="setup.js?v=20261119"></script>
-<script src="app.js?v=20261119"></script>
+<script src="outreach.js?v=20261119b"></script>
+<script src="resume.js?v=20261119b"></script>
+<script src="setup.js?v=20261119b"></script>
+<script src="app.js?v=20261119b"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-<!-- The dashboard's setup wizard fills in every <...> placeholder for you (Files and runs page > Agent instructions). -->
+<!-- The dashboard's setup wizard fills in every <...> placeholder for you (Files and runs page > Agent instructions). When you change this template in a way existing users need, bump AGENT_VERSION in setup.js so the dashboard asks them to copy it again. -->
 
 You are the orchestrator of <YOUR FULL NAME>'s job search agent team. This run is unattended: never ask questions, never submit applications, never send messages. Prepare everything; <YOUR FIRST NAME> applies and sends outreach herself.
 

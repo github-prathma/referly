@@ -146,11 +146,34 @@
     showGate('signin');
   });
   // Look around with sample data before signing in.
+  // ---------- Agent instruction updates ----------
+  // Each user's scheduled task keeps the instructions they pasted at setup, so when the template
+  // changes we ask them to copy the new version. The version they have is kept on the tracker.
+  const agentOutdated = () => !!(WS && !usingSample && window.JD_SETUP && WS.agentVersion !== window.JD_SETUP.AGENT_VERSION);
+  function drawAgentBanner() { $('agent-banner').hidden = !agentOutdated(); }
+  async function markAgentUpdated() {
+    const v = window.JD_SETUP.AGENT_VERSION;
+    try {
+      await api(`${DRIVE}/${WS.tracker}?fields=id`, { method: 'PATCH', json: { appProperties: { agentVersion: v } } });
+      WS.agentVersion = v;
+    } catch (e) { toast('Could not save that: ' + String(e.message || e).slice(0, 100), true); }
+    drawAgentBanner();
+  }
+  async function copyAgent(buttonEl) {
+    const ok = await window.JD_SETUP.copyPrompt(buttonEl, WS, { fullName: (PROFILE && PROFILE.fullName) || S.name, firstName: S.name, tz: S.tz });
+    if (ok && agentOutdated()) {
+      $('agent-banner-text').textContent = 'Copied. In Claude, say: "Replace the instructions of my Job Search Agent scheduled task with these:", then paste. Click Done once it\u2019s updated.';
+      $('agent-banner-copy').hidden = true;
+    }
+  }
+  $('agent-banner-copy').addEventListener('click', () => copyAgent($('agent-banner-copy')));
+  $('agent-banner-done').addEventListener('click', markAgentUpdated);
+
   $('demo').addEventListener('click', () => { WS = null; applyLinks(); showApp(); setSample(true); });
   // Files and runs page: copy the agent instructions filled with this user's IDs.
   $('agent-copy').addEventListener('click', () => {
     if (!WS) { $('agent-copy').lastChild.textContent = 'Sign in first to get your instructions'; return; }
-    window.JD_SETUP.copyPrompt($('agent-copy'), WS, { fullName: (PROFILE && PROFILE.fullName) || S.name, firstName: S.name, tz: S.tz });
+    copyAgent($('agent-copy'));
   });
   function ensureToken() {
     if (token && Date.now() < tokenExpiry) return Promise.resolve();
@@ -188,7 +211,7 @@
     const f = (res.files || [])[0];
     if (!f) return null;
     const a = f.appProperties || {};
-    return { tracker: f.id, folder: a.folder, config: a.config, resume: a.resume, resumes: a.resumes, outreach: a.outreach, runlogs: a.runlogs, profileGid: a.profileGid, jobsTab: a.jobsTab || 'Jobs' };
+    return { tracker: f.id, folder: a.folder, config: a.config, resume: a.resume, resumes: a.resumes, outreach: a.outreach, runlogs: a.runlogs, profileGid: a.profileGid, jobsTab: a.jobsTab || 'Jobs', agentVersion: a.agentVersion || '' };
   }
   function applyProfile(rows) {
     const get = (k) => rows.find((r) => String(r[0] || '').trim().toLowerCase() === k);
@@ -781,6 +804,7 @@
   function render() {
     if ($('app').hidden) return;
     $('sample-banner').hidden = !usingSample;
+    drawAgentBanner();
     const D = derive();
     const today = (D.byDay.find((x) => x.date === todayPT()) || {}).value || 0;
     const h = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
