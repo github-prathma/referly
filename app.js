@@ -41,8 +41,8 @@
   const pct = d3.format('.0%');
   const cssVar = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
-  const STATUSES = ['Ready to apply', 'Applied', 'Referral requested', 'Interviewing', 'Offer', 'On hold', 'Rejected', 'Skipped'];
-  const SVAR = { 'Ready to apply': '--s-ready', 'Applied': '--s-applied', 'Referral requested': '--s-referral', 'Interviewing': '--s-interview', 'Offer': '--s-offer', 'On hold': '--s-hold', 'Rejected': '--s-rejected', 'Skipped': '--s-skipped' };
+  const STATUSES = ['Ready to apply', 'Applied', 'Referral requested', 'Interviewing', 'Offer', 'On hold', 'Rejected', 'Job stale', 'Skipped'];
+  const SVAR = { 'Ready to apply': '--s-ready', 'Applied': '--s-applied', 'Referral requested': '--s-referral', 'Interviewing': '--s-interview', 'Offer': '--s-offer', 'On hold': '--s-hold', 'Rejected': '--s-rejected', 'Job stale': '--s-stale', 'Skipped': '--s-skipped' };
   const sColor = (s) => `var(${SVAR[s] || '--s-skipped'})`;
   const AVATAR = ['#2563eb', '#0ea5e9', '#8b5cf6', '#4f46e5', '#10b981', '#f59e0b', '#f43f5e', '#14b8a6', '#6366f1', '#ec4899'];
   const PALETTE = ['--brand', '--s-referral', '--s-offer', '--s-ready', '--s-rejected', '--brand-2', '--s-interview', '--s-applied'];
@@ -259,6 +259,7 @@
         .map(({ r, row }) => Object.assign(Object.fromEntries(cols.map((c, i) => [c, r[i] ?? ''])), { __row: row }));
       if (cols.length && !cols.includes('Referral Contacts')) addReferralColumns().catch(() => { /* optional upgrade */ });
       else if (cols.length && !cols.includes('Resume PDF')) addPdfColumn().catch(() => { /* optional upgrade */ });
+      if (cols.length) addStatusOptions().catch(() => { /* optional upgrade */ });
       const runRows = toRows(runTab.values || []).reverse().slice(0, 8);
       realData = { jobs: rows, drafts: draftRows, runs: runRows.map((x) => ({ title: 'Run ' + String(x['Run Time'] || '').replace(/^'/, ''), created: '', link: safeUrl(x['Log Link']) || '', found: x['Found'], prepared: x['Prepared'], notes: x['Notes'] })) };
       if (!usingSample || rows.length) { usingSample = false; jobs = realData.jobs; runs = realData.runs; drafts = realData.drafts; }
@@ -276,6 +277,20 @@
   async function addPdfColumn() {
     const tabName = WS.jobsTab || 'Jobs';
     await api(SHEETS + WS.tracker + '/values/' + encodeURIComponent(`'${tabName}'!S1`) + '?valueInputOption=RAW', { method: 'PUT', json: { values: [['Resume PDF']] } });
+  }
+  // Older trackers: add newer statuses (e.g. "Job stale") to the Status dropdown, once per tracker.
+  async function addStatusOptions() {
+    const key = 'jd_status_opts_' + WS.tracker, want = STATUSES.join('|');
+    try { if (localStorage.getItem(key) === want) return; } catch (e) {}
+    const tabName = WS.jobsTab || 'Jobs';
+    const meta = await api(SHEETS + WS.tracker + '?fields=sheets.properties(sheetId,title)');
+    const sh = (meta.sheets || []).map((x) => x.properties).find((x) => x.title === tabName);
+    if (!sh) return;
+    await api(SHEETS + WS.tracker + ':batchUpdate', { json: { requests: [
+      { setDataValidation: { range: { sheetId: sh.sheetId, startRowIndex: 1, endRowIndex: 1000, startColumnIndex: 13, endColumnIndex: 14 },
+        rule: { condition: { type: 'ONE_OF_LIST', values: STATUSES.map((v) => ({ userEnteredValue: v })) }, showCustomUi: true, strict: false } } },
+    ] } });
+    try { localStorage.setItem(key, want); } catch (e) {}
   }
   // Older trackers: add the two referral columns and the "On hold" status to the dropdown, once.
   async function addReferralColumns() {

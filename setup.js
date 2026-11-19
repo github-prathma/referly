@@ -7,7 +7,7 @@ window.JD_SETUP = (() => {
   const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id';
   const SHEETS = 'https://sheets.googleapis.com/v4/spreadsheets/';
   const FOLDER = 'application/vnd.google-apps.folder';
-  const STATUSES = ['Ready to apply', 'Applied', 'Referral requested', 'Interviewing', 'Offer', 'On hold', 'Rejected', 'Skipped'];
+  const STATUSES = ['Ready to apply', 'Applied', 'Referral requested', 'Interviewing', 'Offer', 'On hold', 'Rejected', 'Job stale', 'Skipped'];
   const HEADERS = {
     Jobs: ['Date Found', 'Company', 'Job Title', 'Location', 'Job Link', 'Source', 'Posted At', 'Match Score', 'Sponsorship Signal', 'H-1B History', 'Tailored Resume Link', 'Company Folder', 'Outreach Drafts Link', 'Status', 'Date Applied', 'Missing Keywords / Notes', 'Referral Contacts', 'Referral Requested On', 'Resume PDF'],
     Outreach: ['Date Drafted', 'Company', 'Job Title', 'Job Link', 'Person', 'Person Title', 'Relationship', 'Found Via', 'Profile URL', 'Message Type', 'Subject', 'Message', 'Draft ID'],
