@@ -9,7 +9,7 @@ window.JD_SETUP = (() => {
   const FOLDER = 'application/vnd.google-apps.folder';
   const STATUSES = ['Ready to apply', 'Applied', 'Referral requested', 'Interviewing', 'Offer', 'On hold', 'Rejected', 'Skipped'];
   const HEADERS = {
-    Jobs: ['Date Found', 'Company', 'Job Title', 'Location', 'Job Link', 'Source', 'Posted At', 'Match Score', 'Sponsorship Signal', 'H-1B History', 'Tailored Resume Link', 'Company Folder', 'Outreach Drafts Link', 'Status', 'Date Applied', 'Missing Keywords / Notes', 'Referral Contacts', 'Referral Requested On'],
+    Jobs: ['Date Found', 'Company', 'Job Title', 'Location', 'Job Link', 'Source', 'Posted At', 'Match Score', 'Sponsorship Signal', 'H-1B History', 'Tailored Resume Link', 'Company Folder', 'Outreach Drafts Link', 'Status', 'Date Applied', 'Missing Keywords / Notes', 'Referral Contacts', 'Referral Requested On', 'Resume PDF'],
     Outreach: ['Date Drafted', 'Company', 'Job Title', 'Job Link', 'Person', 'Person Title', 'Relationship', 'Found Via', 'Profile URL', 'Message Type', 'Subject', 'Message', 'Draft ID'],
     Runs: ['Run Time', 'Window', 'Found', 'Prepared', 'InMails Drafted Today', 'Log Link', 'Notes'],
     Profile: ['Field', 'Value', 'Short version', 'Area', 'Keywords', 'How to edit'],
@@ -309,7 +309,7 @@ window.JD_SETUP = (() => {
     if (!r.ok) throw new Error('could not load the agent template');
     let t = (await r.text()).replace(/^<!--[\s\S]*?-->\s*/, '');
     const map = {
-      '<YOUR FULL NAME>': who.fullName || who.firstName || 'the user', '<YOUR FIRST NAME>': who.firstName || 'the user', '<TIME ZONE>': who.tz || 'America/Los_Angeles',
+      '<YOUR FULL NAME>': who.fullName || who.firstName || 'the user', '<YOUR FIRST NAME>': who.firstName || 'the user', '<YOUR PDF NAME>': String(who.fullName || who.firstName || 'Resume').replace(/[^A-Za-z0-9]/g, '') || 'Resume', '<TIME ZONE>': who.tz || 'America/Los_Angeles',
       '<JOB AGENT FOLDER ID>': ws.folder, '<SEARCH CONFIG DOC ID>': ws.config, '<BASE RESUME DOC ID>': ws.resume, '<TRACKER SHEET ID>': ws.tracker,
       '<TAILORED RESUMES FOLDER ID>': ws.resumes, '<OUTREACH DRAFTS FOLDER ID>': ws.outreach, '<RUN LOGS FOLDER ID>': ws.runlogs,
     };

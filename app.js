@@ -218,7 +218,7 @@
     try {
       const tab = (range) => api(SHEETS + WS.tracker + '/values/' + encodeURIComponent(range));
       const [sheet, runTab, outreach, profile] = await Promise.all([
-        tab(`'${WS.jobsTab || 'Jobs'}'!A1:R1000`),
+        tab(`'${WS.jobsTab || 'Jobs'}'!A1:S1000`),
         tab("'Runs'!A1:G500").catch(() => ({ values: [] })),
         tab("'Outreach'!A1:M2000").catch(() => ({ values: [] })),
         tab("'Profile'!A1:E80").catch(() => ({ values: [] })),
@@ -233,6 +233,7 @@
       const rows = values.slice(1).map((r, i) => ({ r, row: i + 2 })).filter(({ r }) => r.some((c) => String(c ?? '').trim() !== ''))
         .map(({ r, row }) => Object.assign(Object.fromEntries(cols.map((c, i) => [c, r[i] ?? ''])), { __row: row }));
       if (cols.length && !cols.includes('Referral Contacts')) addReferralColumns().catch(() => { /* optional upgrade */ });
+      else if (cols.length && !cols.includes('Resume PDF')) addPdfColumn().catch(() => { /* optional upgrade */ });
       const runRows = toRows(runTab.values || []).reverse().slice(0, 8);
       realData = { jobs: rows, drafts: draftRows, runs: runRows.map((x) => ({ title: 'Run ' + String(x['Run Time'] || '').replace(/^'/, ''), created: '', link: safeUrl(x['Log Link']) || '', found: x['Found'], prepared: x['Prepared'], notes: x['Notes'] })) };
       if (!usingSample || rows.length) { usingSample = false; jobs = realData.jobs; runs = realData.runs; drafts = realData.drafts; }
@@ -246,16 +247,21 @@
       return e;
     }
   }
+  // Older trackers: add the "Resume PDF" column (S), where the agent saves each job's ready-to-send PDF.
+  async function addPdfColumn() {
+    const tabName = WS.jobsTab || 'Jobs';
+    await api(SHEETS + WS.tracker + '/values/' + encodeURIComponent(`'${tabName}'!S1`) + '?valueInputOption=RAW', { method: 'PUT', json: { values: [['Resume PDF']] } });
+  }
   // Older trackers: add the two referral columns and the "On hold" status to the dropdown, once.
   async function addReferralColumns() {
     const tabName = WS.jobsTab || 'Jobs';
-    await api(SHEETS + WS.tracker + '/values/' + encodeURIComponent(`'${tabName}'!Q1:R1`) + '?valueInputOption=RAW', { method: 'PUT', json: { values: [['Referral Contacts', 'Referral Requested On']] } });
+    await api(SHEETS + WS.tracker + '/values/' + encodeURIComponent(`'${tabName}'!Q1:S1`) + '?valueInputOption=RAW', { method: 'PUT', json: { values: [['Referral Contacts', 'Referral Requested On', 'Resume PDF']] } });
     const meta = await api(SHEETS + WS.tracker + '?fields=sheets.properties(sheetId,title)');
     const sh = (meta.sheets || []).map((x) => x.properties).find((x) => x.title === tabName);
     if (sh) await api(SHEETS + WS.tracker + ':batchUpdate', { json: { requests: [
       { setDataValidation: { range: { sheetId: sh.sheetId, startRowIndex: 1, endRowIndex: 1000, startColumnIndex: 13, endColumnIndex: 14 },
         rule: { condition: { type: 'ONE_OF_LIST', values: STATUSES.map((v) => ({ userEnteredValue: v })) }, showCustomUi: true, strict: false } } },
-      { repeatCell: { range: { sheetId: sh.sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 16, endColumnIndex: 18 }, cell: { userEnteredFormat: { textFormat: { bold: true } } }, fields: 'userEnteredFormat.textFormat.bold' } },
+      { repeatCell: { range: { sheetId: sh.sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 16, endColumnIndex: 19 }, cell: { userEnteredFormat: { textFormat: { bold: true } } }, fields: 'userEnteredFormat.textFormat.bold' } },
     ] } });
   }
 
@@ -485,6 +491,17 @@
     if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener'; } else { a.setAttribute('aria-disabled', 'true'); a.title = usingSample ? 'Sample data has no links' : 'Not available yet'; }
     return a;
   };
+  // A Drive link to the job's PDF becomes a direct download, so the file saves under its Drive name (e.g. PrathmaRastogi.pdf).
+  const pdfDownload = (link) => {
+    const m = String(link || '').match(/\/d\/([\w-]{20,})|[?&]id=([\w-]{20,})/);
+    return m ? 'https://drive.google.com/uc?export=download&id=' + (m[1] || m[2]) : null;
+  };
+  const pdfBtn = (r) => {
+    const a = btn('PDF', pdfDownload(r['Resume PDF']), 'download', 'var(--s-ready)');
+    if (a.href) { a.removeAttribute('target'); a.title = 'Download your resume for this job as a PDF'; }
+    else if (!usingSample) a.title = 'No PDF for this job yet';
+    return a;
+  };
   const emptyBox = (box, text, iconName = 'inbox', action) => {
     const e = el('div', 'empty'); e.append(icon(iconName, 'ic'), el('div', null, text));
     if (action) e.append(action);
@@ -677,7 +694,7 @@
       meta.append(m1, m2, m3); main.append(role, meta);
       const qs = el('div', 'q-status'); qs.append(statusSelect(r)); main.append(qs);
       const acts = el('div', 'q-acts');
-      acts.append(btn('Apply', r['Job Link'], 'external', 'var(--brand)'), btn('Resume', r['Tailored Resume Link'], 'file', 'var(--s-ready)'), btn('Outreach', r['Outreach Drafts Link'], 'message', 'var(--s-referral)'));
+      acts.append(btn('Apply', r['Job Link'], 'external', 'var(--brand)'), btn('Resume', r['Tailored Resume Link'], 'file', 'var(--s-ready)'), pdfBtn(r), btn('Outreach', r['Outreach Drafts Link'], 'message', 'var(--s-referral)'));
       acts.firstChild.classList.add('primary');
       const cn = el('a', 'btn sm'); cn.style.setProperty('--b', 'var(--s-offer)'); cn.href = window.JD_OUTREACH.peopleSearch(r['Company'], 'first'); cn.target = '_blank'; cn.rel = 'noopener'; cn.title = 'Your 1st-degree connections at ' + r['Company'];
       cn.addEventListener('click', () => setActiveJob(jobOf(r)));
@@ -735,7 +752,7 @@
       td(statusSelect(r));
       td(r['Date Found'] ? fmtDay(r['Date Found']) : '—', 'hide-sm nowrap');
       const acts = el('div', 'acts');
-      acts.append(btn('Apply', r['Job Link'], 'external', 'var(--brand)'), btn('Resume', r['Tailored Resume Link'], 'file', 'var(--s-ready)'), btn('Outreach', r['Outreach Drafts Link'], 'message', 'var(--s-referral)'), btn('', r['Company Folder'], 'folder'));
+      acts.append(btn('Apply', r['Job Link'], 'external', 'var(--brand)'), btn('Resume', r['Tailored Resume Link'], 'file', 'var(--s-ready)'), pdfBtn(r), btn('Outreach', r['Outreach Drafts Link'], 'message', 'var(--s-referral)'), btn('', r['Company Folder'], 'folder'));
       const dr = el('button', 'btn sm'); dr.type = 'button'; dr.style.setProperty('--b', 'var(--brand)'); dr.title = 'Draft a LinkedIn message for this job';
       dr.append(icon('users'), document.createTextNode('People')); dr.title = 'Find connections at this company and draft a message'; dr.addEventListener('click', () => prefillOutreach(r)); acts.append(dr);
       acts.lastChild.title = acts.lastChild.getAttribute('aria-disabled') ? acts.lastChild.title : 'Company folder';
